@@ -8,7 +8,7 @@ services:
       - "6379:6379"
     command: redis-server /usr/local/etc/redis/redis.conf --requirepass "Heli@ghar771379"
     networks:
-      - esnet
+      - drlink_network
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "Heli@ghar771379", "ping"]
       interval: 30s
@@ -32,7 +32,7 @@ services:
       - "9200:9200"
       - "9300:9300"
     networks:
-      - esnet
+      - drlink_network
     healthcheck:
       test: ["CMD-SHELL", "curl --silent --fail http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
@@ -52,13 +52,53 @@ services:
       elasticsearch:
         condition: service_healthy
     networks:
-      - esnet
+      - drlink_network
+
+  mysql:
+    image: mysql:latest
+    container_name: mysql-container
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: drlinkP
+      MYSQL_USER: drlinkadmin
+      MYSQL_PASSWORD: 123456789a
+      MYSQL_ROOT_PASSWORD: 123456789a
+    ports:
+      - "3307:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci --bind-address=0.0.0.0
+    volumes:
+      - mysqldata:/var/lib/mysql
+    networks:
+      - drlink_network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789a" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-container
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: 123456789a
+    ports:
+      - "8081:80" # Default phpMyAdmin port is 80 inside the container
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - drlink_network
 
 networks:
-  esnet:
-    name: esnet
+  drlink_network:
+    name: drlink_network
     driver: bridge
 
 volumes:
   esdata:
+    driver: local
+  mysqldata:
     driver: local
