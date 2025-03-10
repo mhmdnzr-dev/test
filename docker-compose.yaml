@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   redis:
@@ -36,7 +36,11 @@ services:
     networks:
       - drlink_network
     healthcheck:
-      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9200/_cluster/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl --silent --fail http://localhost:9200/_cluster/health || exit 1",
+        ]
       interval: 30s
       retries: 3
       timeout: 10s
@@ -57,7 +61,7 @@ services:
       - drlink_network
 
   mysql:
-    image: mysql:latest
+    image: mysql:8.0
     container_name: DrLink.MySql
     restart: unless-stopped
     environment:
@@ -65,21 +69,20 @@ services:
       MYSQL_USER: drlinkadmin
       MYSQL_PASSWORD: 123456789a
       MYSQL_ROOT_PASSWORD: 123456789a
+      MYSQL_ROOT_HOST: "%" # Allow root access from any host
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    command: >
-      bash -c "mkdir -p /var/lib/mysql && chown -R mysql:mysql /var/lib/mysql && 
-               if [ ! -d /var/lib/mysql/mysql ]; then mysqld --initialize-insecure; fi &&
-               mysqld --innodb_force_recovery=1"
+      - ./mysql-init:/docker-entrypoint-initdb.d # Initialization scripts
+    networks:
+      - drlink_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789a"]
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-p123456789a"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - drlink_network
+    command: --default-authentication-plugin=mysql_native_password # Older auth plugin
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
