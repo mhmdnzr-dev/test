@@ -56,7 +56,7 @@ services:
 
   mysql:
     image: mysql:latest
-    container_name: mysql-container
+    container_name: DrLink.MySql
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: drlinkP
