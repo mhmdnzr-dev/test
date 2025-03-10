@@ -59,28 +59,27 @@ services:
       - drlink_network
 
   mysql:
-    image: mysql:8.0.41 # Explicit version matching your data
-    container_name: DrLink.MySql
+    image: mysql:latest
+    container_name: DrLink.MySQL
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: drlinkP
       MYSQL_USER: drlinkadmin
       MYSQL_PASSWORD: 123456789a
       MYSQL_ROOT_PASSWORD: 123456789a
-      MYSQL_ROOT_HOST: "%"
     ports:
       - "3307:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci --bind-address=0.0.0.0
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - drlink_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-uroot", "-p123456789a"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789a" ]
       interval: 10s
       timeout: 5s
       retries: 5
-    command: --default-authentication-plugin=mysql_native_password --skip-innodb-read-only-compressed
+
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
