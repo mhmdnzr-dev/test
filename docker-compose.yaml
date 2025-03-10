@@ -66,7 +66,7 @@ services:
       MYSQL_PASSWORD: 123456789a
       MYSQL_ROOT_PASSWORD: 123456789a
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     command: >
