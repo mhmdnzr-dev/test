@@ -1,0 +1,64 @@
+services:
+  redis:
+    container_name: DrLink.Redis
+    image: redis:latest
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass "Heli@ghar771379"
+    networks:
+      - esnet
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Heli@ghar771379", "ping"]
+      interval: 30s
+      retries: 3
+      start_period: 5s
+      timeout: 10s
+
+  elasticsearch:
+    container_name: DrLink.ElasticSearch
+    image: elasticsearch:7.17.25
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - cluster.name=es-docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - esnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+  kibana:
+    container_name: DrLink.Kibana
+    image: kibana:7.17.25
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://DrLink.ElasticSearch:9200
+      - ELASTICSEARCH_SSL_VERIFICATIONMODE=none
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - esnet
+
+networks:
+  esnet:
+    name: esnet
+    driver: bridge
+
+volumes:
+  esdata:
+    driver: local
