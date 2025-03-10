@@ -1,7 +1,10 @@
+version: '3.8'
+
 services:
   redis:
     container_name: DrLink.Redis
     image: redis:latest
+    restart: unless-stopped
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
     ports:
@@ -13,18 +16,17 @@ services:
       test: ["CMD", "redis-cli", "-a", "Heli@ghar771379", "ping"]
       interval: 30s
       retries: 3
-      start_period: 5s
       timeout: 10s
 
   elasticsearch:
     container_name: DrLink.ElasticSearch
     image: elasticsearch:7.17.25
+    restart: unless-stopped
     volumes:
       - esdata:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
       - cluster.name=es-docker-cluster
-      - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - xpack.security.enabled=false
       - xpack.security.http.ssl.enabled=false
@@ -34,19 +36,15 @@ services:
     networks:
       - drlink_network
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl --silent --fail http://localhost:9200/_cluster/health || exit 1",
-        ]
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       retries: 3
-      start_period: 10s
       timeout: 10s
 
   kibana:
     container_name: DrLink.Kibana
     image: kibana:7.17.25
+    restart: unless-stopped
     ports:
       - "5601:5601"
     environment:
@@ -71,45 +69,41 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    command: bash -c "chown -R mysql:mysql /var/lib/mysql && mysqld"
+    command: >
+      bash -c "mkdir -p /var/lib/mysql && chown -R mysql:mysql /var/lib/mysql && 
+               if [ ! -d /var/lib/mysql/mysql ]; then mysqld --initialize-insecure; fi &&
+               mysqld --innodb_force_recovery=1"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-uroot",
-          "-p123456789a",
-        ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789a"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - drlink_network
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: phpmyadmin-container
+    container_name: DrLink.PhpMyAdmin
     restart: unless-stopped
     environment:
       PMA_HOST: mysql
       PMA_USER: root
       PMA_PASSWORD: 123456789a
     ports:
-      - "8081:80" # Default phpMyAdmin port is 80 inside the container
+      - "8081:80"
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - drlink_network
 
+volumes:
+  mysql_data:
+    driver: local
+  esdata:
+    driver: local
+
 networks:
   drlink_network:
     name: drlink_network
     driver: bridge
-
-volumes:
-  esdata:
-    driver: local
-  mysqldata:
-    driver: local
