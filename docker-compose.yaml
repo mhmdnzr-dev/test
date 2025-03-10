@@ -34,7 +34,11 @@ services:
     networks:
       - drlink_network
     healthcheck:
-      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9200/_cluster/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl --silent --fail http://localhost:9200/_cluster/health || exit 1",
+        ]
       interval: 30s
       retries: 3
       start_period: 10s
@@ -65,13 +69,20 @@ services:
       MYSQL_ROOT_PASSWORD: 123456789a
     ports:
       - "3307:3306"
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci --bind-address=0.0.0.0
     volumes:
-      - mysqldata:/var/lib/mysql
-    networks:
-      - drlink_network
+      - mysql_data:/var/lib/mysql
+    command: bash -c "chown -R mysql:mysql /var/lib/mysql && mysqld"
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789a" ]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-p123456789a",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
