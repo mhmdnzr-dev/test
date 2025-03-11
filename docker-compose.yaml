@@ -1,90 +1,69 @@
 services:
-  # redis:
-  #   container_name: DrLink.Redis
-  #   image: redis:latest
-  #   restart: unless-stopped
-  #   volumes:
-  #     - ./redis.conf:/usr/local/etc/redis/redis.conf
-  #   ports:
-  #     - "6379:6379"
-  #   command: redis-server /usr/local/etc/redis/redis.conf --requirepass "Heli@ghar771379"
-  #   networks:
-  #     - drlink_network
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "-a", "Heli@ghar771379", "ping"]
-  #     interval: 30s
-  #     retries: 3
-  #     timeout: 10s
-
-  # elasticsearch:
-  #   container_name: DrLink.ElasticSearch
-  #   image: elasticsearch:7.17.25
-  #   restart: unless-stopped
-  #   volumes:
-  #     - drlink_data:/usr/share/elasticsearch/data
-  #   environment:
-  #     - discovery.type=single-node
-  #     - cluster.name=es-docker-cluster
-  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-  #     - xpack.security.enabled=false
-  #     - xpack.security.http.ssl.enabled=false
-  #   ports:
-  #     - "9200:9200"
-  #     - "9300:9300"
-  #   networks:
-  #     - drlink_network
-  #   healthcheck:
-  #     test:
-  #       [
-  #         "CMD-SHELL",
-  #         "curl --silent --fail http://localhost:9200/_cluster/health || exit 1",
-  #       ]
-  #     interval: 30s
-  #     retries: 3
-  #     timeout: 10s
-
-  # kibana:
-  #   container_name: DrLink.Kibana
-  #   image: kibana:7.17.25
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5601:5601"
-  #   environment:
-  #     - ELASTICSEARCH_HOSTS=http://DrLink.ElasticSearch:9200
-  #     - ELASTICSEARCH_SSL_VERIFICATIONMODE=none
-  #   depends_on:
-  #     elasticsearch:
-  #       condition: service_healthy
-  #   networks:
-  #     - drlink_network
-
-  
-
-
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: DrLink.PhpMyAdmin
+  redis:
+    container_name: DrLink.Redis
+    image: redis:latest
     restart: unless-stopped
-    environment:
-      PMA_HOST: DrLink.MySQL # Use container name here for service discovery
-      PMA_USER: root
-      PMA_PASSWORD: 123456789a
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
     ports:
-      - "8081:80"
+      - "6379:6379"
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass "Heli@ghar771379"
+    networks:
+      - drlink_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Heli@ghar771379", "ping"]
+      interval: 30s
+      retries: 3
+      timeout: 10s
+
+  elasticsearch:
+    container_name: DrLink.ElasticSearch
+    image: elasticsearch:7.17.25
+    restart: unless-stopped
+    volumes:
+      - drlink_data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - cluster.name=es-docker-cluster
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - drlink_network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --silent --fail http://localhost:9200/_cluster/health || exit 1",
+        ]
+      interval: 30s
+      retries: 3
+      timeout: 10s
+
+  kibana:
+    container_name: DrLink.Kibana
+    image: kibana:7.17.25
+    restart: unless-stopped
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://DrLink.ElasticSearch:9200
+      - ELASTICSEARCH_SSL_VERIFICATIONMODE=none
     depends_on:
-      mysql:
+      elasticsearch:
         condition: service_healthy
     networks:
       - drlink_network
-
 
   mysql:
     image: mysql:8.0
     container_name: DrLink.MySQL
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword 
+      MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: drlink_db
       MYSQL_USER: drlinkadmin
       MYSQL_PASSWORD: 123456789a
@@ -101,10 +80,26 @@ services:
       retries: 3
       start_period: 20s
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: DrLink.PhpMyAdmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: DrLink.MySQL # Use container name here for service discovery
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    ports:
+      - "8081:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - drlink_network
+
 volumes:
   mysql_data:
+  drlink_data:
 
 networks:
   drlink_network:
     external: true
-
