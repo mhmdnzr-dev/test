@@ -1,4 +1,35 @@
 services:
+  elasticsearch:
+    container_name: DrLink.ElasticSearch
+    image: elasticsearch:7.17.25
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - cluster.name=es-docker-cluster
+      - xpack.security.enabled=true
+      - xpack.security.transport.ssl.enabled=true
+      - ELASTIC_PASSWORD=Dev1234
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - drlink_network
+
+  kibana:
+    container_name: DrLink.Kibana
+    image: kibana:7.17.25
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://DrLink.ElasticSearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=Dev1234
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - drlink_network
+
   redis:
     container_name: DrLink.Redis
     image: redis:latest
@@ -15,48 +46,6 @@ services:
       interval: 30s
       retries: 3
       timeout: 10s
-
-  elasticsearch:
-    container_name: DrLink.ElasticSearch
-    image: elasticsearch:7.17.25
-    restart: unless-stopped
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
-    environment:
-      - discovery.type=single-node
-      - cluster.name=es-docker-cluster
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.security.enabled=false
-      - xpack.security.http.ssl.enabled=false
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    networks:
-      - drlink_network
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl --silent --fail http://localhost:9200/_cluster/health || exit 1",
-        ]
-      interval: 30s
-      retries: 3
-      timeout: 10s
-
-  kibana:
-    container_name: DrLink.Kibana
-    image: kibana:7.17.25
-    restart: unless-stopped
-    ports:
-      - "5601:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=http://DrLink.ElasticSearch:9200
-      - ELASTICSEARCH_SSL_VERIFICATIONMODE=none
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - drlink_network
 
   mysql:
     image: mysql:latest
@@ -104,7 +93,7 @@ services:
         condition: service_healthy
     networks:
       - drlink_network
-  
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: DrLink.SqlServer
@@ -118,10 +107,32 @@ services:
     networks:
       - drlink_network
 
+  postgres:
+    image: postgres:latest
+    container_name: DrLink.Postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: drlinkdb
+      POSTGRES_USER: drlinkadmin
+      POSTGRES_PASSWORD: 123456789a
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - drlink_network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "drlinkadmin"]
+      interval: 30s
+      retries: 3
+      timeout: 10s
+
 volumes:
   mysql_data:
     driver: local
   esdata:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:
